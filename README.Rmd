@@ -1,0 +1,25 @@
+# R-GPT: The LLM-Powered Shiny Sandbox
+
+A Shiny app that turns plain-English requests into R code (plots, tables, summaries) using LLMs via `ellmer`, then runs and displays the result. It works on simulated CDISC data (ADSL, ADAE, ADTTE from `random.cdisc.data`) or on your own uploaded dataset (.rds, .csv, .xpt, .sas7bdat).
+
+
+## Features
+- Choose an model (only Gemini at the moment has a free API key)
+- Simulate ADSL / ADAE / ADTTE data, or upload your own (refer to them as user_data if needed)
+- Ask for tables (i.e. gt, gtsummary), plots (ggplot2, plotly, survminer) or console output
+- Refine results iteratively, with an Undo button to restore previous results
+
+## Setup
+1. Install the packages used by the app (see `renv.lock` if you use renv).
+2. Set your Gemini API key as an environment variable. Never put it in the code:
+```r
+   Sys.setenv(GOOGLE_API_KEY = "your-key")   # or add it to ~/.Renviron
+```
+3. Run `shiny::runApp()`.
+
+## Example prompts
+- "Kaplan-Meier plot of OS by ARM using adtte"
+- "Demographics table by ARM using adsl"
+
+## Warning
+The app runs LLM-generated code with `eval()`. Use it locally, and don't expose it publicly without sandboxing.
