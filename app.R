@@ -12,7 +12,7 @@ library(survminer)
 library(bslib)
 
 
-setwd('C:/Users/user/Desktop/R')
+#setwd('C:/Users/user/Desktop/R')
 
 addResourcePath("assets", "www")
 
