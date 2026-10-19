@@ -10,9 +10,11 @@ library(random.cdisc.data)
 library(survival)
 library(survminer)
 library(bslib)
-
+library(flextable)
+library(rlistings)
 
 #setwd('C:/Users/user/Desktop/R')
+#setwd('C:/Users/user/Desktop/shiny_apps/r-gpt/LLMs in shiny')
 
 addResourcePath("assets", "www")
 
@@ -139,6 +141,13 @@ server <- function(input, output, session) {
     user_data<<-user_data_()
     
     tryCatch({
+      
+      is_base_plot <- grepl("(^plot\\(|^hist\\(|^barplot\\(|^boxplot\\(|^lines\\(|^points\\()", trimws(ai_code()))
+      
+      if (is_base_plot) {
+        return(list(obj = "BASE_PLOT_MARKER", text = "Plotting..."))
+      }
+      
       console_out <- capture.output({
         res_obj <- eval(parse(text = ai_code()))
       })
@@ -156,13 +165,18 @@ server <- function(input, output, session) {
       return(verbatimTextOutput("error_display"))
     }
     
-    if (inherits(res$obj, "gtsummary") || inherits(res$obj, "gt_tbl")) {
+    if (identical(res$obj, "BASE_PLOT_MARKER")) {
+      plotOutput("rendered_plot")
+    } else if (inherits(res$obj, "gtsummary") || inherits(res$obj, "gt_tbl")) {
       gt::gt_output("rendered_table")
     } else if (inherits(res$obj, "plotly") || inherits(res$obj, "htmlwidget")) {
       plotly::plotlyOutput("rendered_plotly") 
-    } else if (is.atomic(res$obj) || length(res$text) > 0 || is.data.frame(res$obj)) {
-      # FIXED: Added is.atomic(res$obj) so raw numbers like 14 from nrow() route here!
-      verbatimTextOutput("rendered_text")
+      # UPDATED CHECK: Explicitly ensure ggsurvplot objects route to the plot output container!
+    } else if (inherits(res$obj, "ggsurvplot")) {
+      plotOutput("rendered_plot")
+    } else if (is.atomic(res$obj) || length(res$text) > 0 || is.factor(res$obj) || 
+               is.list(res$obj) || is.data.frame(res$obj)) {
+         verbatimTextOutput("rendered_text")
     } else {
       plotOutput("rendered_plot") 
     }
@@ -187,6 +201,8 @@ server <- function(input, output, session) {
     res <- evaluated_result()
     if (inherits(res, "error")) {
       plot(1, type = "n", main = "Plotting Error")
+    } else if (identical(res$obj, "BASE_PLOT_MARKER")) {
+      eval(parse(text = ai_code()))
     } else if (inherits(res$obj, c("ggplot", "ggsurvplot", "gg", "grob"))) {
       print(res$obj)
     }
@@ -200,7 +216,7 @@ server <- function(input, output, session) {
   # FIXED: Switched to renderPrint so R formats the rtables object layout beautifully
   output$rendered_text <- renderPrint({
     res <- evaluated_result()
-    if (!is.null(res$obj) && (is.vector(res$obj) || is.data.frame(res$obj))) {
+    if (!is.null(res$obj)) {
       print(res$obj)
     } else {
       cat(paste(res$text, collapse = "\n"))
